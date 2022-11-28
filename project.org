@@ -1,0 +1,17 @@
+#+title: Project
+
+* TODO implementation
+- [ ] Finish expression Parser
+- [ ] Make a tokeniser to seperate out individual expressions
+  =String= -> =[String]=
+- [ ] map expression parser over tokenised values
+  =[String]= -> =[SchemeValues]=
+- [ ] You now have an AST
+  Walk it.
+- [ ] You need a translation table
+  Where certain primitives lead to certain ast codes.
+  - [ ] Store :: On =define=
+  - [ ] Load :: On access
+  - [ ] Apply :: values to functions, which also adds a new frame to the stack
+  - [ ] Print :: to stdout
+  - [ ] Read :: from stdin
