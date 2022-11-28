@@ -6,8 +6,8 @@ import Data.Char
 data SchemeValue
   = SchemeBool Bool
   | SchemeSym String -- This is different but I am not sure how to store it.
-  | SchemeNum Integer
-  | SchemeString String
+  | SchemeNum Integer -- NOTE: No floats yet
+  | SchemeString String -- NOTE: no escaping support
   | SchemeList [SchemeValue]
   | SchemeSexp (String, [SchemeValue])
   deriving (Show, Eq)
@@ -59,8 +59,19 @@ schemeBool = f <$> (stringP "#t" <|> stringP "#f")
 schemeSym :: Parser SchemeValue
 schemeSym = SchemeSym <$> (charP '\'' *> spanP (\c -> not (isSpace c || c == '\'')))
 
+notNull :: Parser [a] -> Parser [a]
+notNull (Parser p) =
+  Parser $ \input -> do
+    (input', as) <- p input
+    if null as
+      then Nothing
+      else Just (input', as)
+
 schemeNum :: Parser SchemeValue
-schemeNum = undefined
+schemeNum = SchemeNum . read <$> notNull (spanP isDigit)
+
+schemeString :: Parser SchemeValue
+schemeString = SchemeString <$> (charP '"' *> spanP (/= '"') <* charP '"')
 
 schemeValue :: Parser SchemeValue
-schemeValue = schemeBool <|> schemeSym
+schemeValue = schemeBool <|> schemeSym <|> schemeNum <|> schemeString
