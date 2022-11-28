@@ -86,7 +86,9 @@ schemeList :: Parser SchemeValue
 schemeList = SchemeList <$> (stringP "'(" *> ws *> sepBy schemeValue ws <* ws <* charP ')')
 
 schemeSexp :: Parser SchemeValue
-schemeSexp = (\((SchemeString call) : rest) -> SchemeSexp (call, rest)) <$> (charP '(' *> sepBy schemeValue ws <* ws <* charP ')')
+schemeSexp = SchemeSexp <$> (charP '(' *> ws *> call <* ws <* charP ')')
+  where
+    call = (\(SchemeSym hd) rest -> (hd, rest)) <$> schemeSym <*> (ws *> sepBy schemeValue ws)
 
 schemeValue :: Parser SchemeValue
 schemeValue = schemeSym <|> schemeBool <|> schemeNum <|> schemeString <|> schemeList <|> schemeSexp
