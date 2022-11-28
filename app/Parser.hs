@@ -16,6 +16,7 @@ data SchemeValue
 
 newtype Parser a = Parser {getParser :: String -> Maybe (String, a)}
 
+-- instances
 instance Functor Parser where
   fmap f (Parser p) = Parser $ \input -> do
     (input', a) <- p input
@@ -35,6 +36,7 @@ instance Alternative Parser where
 
   (Parser one) <|> (Parser two) = Parser $ \input -> one input <|> two input
 
+-- Helpers
 charP :: Char -> Parser Char
 charP char = Parser f
   where
@@ -49,18 +51,11 @@ stringP = traverse charP
 spanP :: (Char -> Bool) -> Parser String
 spanP p = Parser $ Just . swap . span p
 
-schemeBool :: Parser SchemeValue
-schemeBool = f <$> (stringP "#t" <|> stringP "#f")
-  where
-    f "#t" = SchemeBool True
-    f "#f" = SchemeBool False
-    f _ = error "this should not happen"
-
 notAllowed :: Char -> Bool
-notAllowed = not . getAny . foldMap (Any .) [isSpace, (== '\''), (== ')')]
+notAllowed = not . getAny . foldMap (Any .) [isSpace, (== '\''), (== ')'), (== '(')]
 
-schemeSym :: Parser SchemeValue
-schemeSym = SchemeSym <$> (charP '\'' *> spanP notAllowed)
+ws :: Parser String
+ws = spanP isSpace
 
 notNull :: Parser [a] -> Parser [a]
 notNull (Parser p) =
