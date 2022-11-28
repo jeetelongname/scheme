@@ -8,6 +8,7 @@ import Data.Tuple
 data SchemeValue
   = SchemeBool Bool
   | SchemeSym String -- This is different but I am not sure how to store it.
+  | SchemeVar String
   | SchemeNum Integer -- NOTE: No floats yet
   | SchemeString String -- NOTE: no escaping support
   | SchemeList [SchemeValue]
@@ -65,14 +66,25 @@ notNull (Parser p) =
       then Nothing
       else Just (input', as)
 
+-- parsers
+schemeBool :: Parser SchemeValue
+schemeBool = f <$> (stringP "#t" <|> stringP "#f")
+  where
+    f "#t" = SchemeBool True
+    f "#f" = SchemeBool False
+    f _ = error "this should not happen"
+
+schemeSym :: Parser SchemeValue
+schemeSym = SchemeSym <$> notNull (charP '\'' *> spanP notAllowed)
+
+schemeVar :: Parser SchemeValue
+schemeVar = SchemeVar <$> notNull (ws *> spanP notAllowed <* ws)
+
 schemeNum :: Parser SchemeValue
 schemeNum = SchemeNum . read <$> notNull (spanP isDigit)
 
 schemeString :: Parser SchemeValue
 schemeString = SchemeString <$> (charP '"' *> spanP (/= '"') <* charP '"')
-
-ws :: Parser String
-ws = spanP isSpace
 
 sepBy :: Parser a -> Parser b -> Parser [a]
 sepBy element seperator = (:) <$> element <*> many (seperator *> element) <|> pure []
@@ -83,7 +95,8 @@ schemeList = SchemeList <$> (stringP "'(" *> ws *> sepBy schemeValue ws <* ws <*
 schemeSexp :: Parser SchemeValue
 schemeSexp = SchemeSexp <$> (charP '(' *> ws *> call <* ws <* charP ')')
   where
-    call = (\(SchemeSym hd) rest -> (hd, rest)) <$> schemeSym <*> (ws *> sepBy schemeValue ws)
+    call = (\(SchemeVar hd) rest -> (hd, rest)) <$> schemeVar <*> (ws *> sepBy schemeValue ws)
 
+-- Final value
 schemeValue :: Parser SchemeValue
-schemeValue = schemeSym <|> schemeBool <|> schemeNum <|> schemeString <|> schemeList <|> schemeSexp
+schemeValue = schemeSym <|> schemeVar <|> schemeBool <|> schemeNum <|> schemeString <|> schemeList <|> schemeSexp
