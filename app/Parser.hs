@@ -2,6 +2,7 @@ module Parser where
 
 import Control.Applicative
 import Data.Char
+import Data.Tuple
 
 data SchemeValue
   = SchemeBool Bool
@@ -45,9 +46,7 @@ stringP :: [Char] -> Parser [Char]
 stringP = traverse charP
 
 spanP :: (Char -> Bool) -> Parser String
-spanP p = Parser $ \input ->
-  let (token, rest) = span p input
-   in return (rest, token)
+spanP p = Parser $ Just . swap . span p
 
 schemeBool :: Parser SchemeValue
 schemeBool = f <$> (stringP "#t" <|> stringP "#f")
