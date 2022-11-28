@@ -2,6 +2,7 @@ module Parser where
 
 import Control.Applicative
 import Data.Char
+import Data.Monoid
 import Data.Tuple
 
 data SchemeValue
@@ -55,8 +56,11 @@ schemeBool = f <$> (stringP "#t" <|> stringP "#f")
     f "#f" = SchemeBool False
     f _ = error "this should not happen"
 
+notAllowed :: Char -> Bool
+notAllowed = not . getAny . foldMap (Any .) [isSpace, (== '\''), (== ')')]
+
 schemeSym :: Parser SchemeValue
-schemeSym = SchemeSym <$> (charP '\'' *> spanP (\c -> not (isSpace c || c == '\'')))
+schemeSym = SchemeSym <$> (charP '\'' *> spanP notAllowed)
 
 notNull :: Parser [a] -> Parser [a]
 notNull (Parser p) =
