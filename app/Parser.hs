@@ -76,5 +76,17 @@ schemeNum = SchemeNum . read <$> notNull (spanP isDigit)
 schemeString :: Parser SchemeValue
 schemeString = SchemeString <$> (charP '"' *> spanP (/= '"') <* charP '"')
 
+ws :: Parser String
+ws = spanP isSpace
+
+sepBy :: Parser a -> Parser b -> Parser [a]
+sepBy element seperator = (:) <$> element <*> many (seperator *> element) <|> pure []
+
+schemeList :: Parser SchemeValue
+schemeList = SchemeList <$> (stringP "'(" *> ws *> sepBy schemeValue ws <* ws <* charP ')')
+
+schemeSexp :: Parser SchemeValue
+schemeSexp = (\((SchemeString call) : rest) -> SchemeSexp (call, rest)) <$> (charP '(' *> sepBy schemeValue ws <* ws <* charP ')')
+
 schemeValue :: Parser SchemeValue
-schemeValue = schemeBool <|> schemeSym <|> schemeNum <|> schemeString
+schemeValue = schemeSym <|> schemeBool <|> schemeNum <|> schemeString <|> schemeList <|> schemeSexp
