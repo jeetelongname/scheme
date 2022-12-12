@@ -5,4 +5,5 @@ import Parser
 main :: IO ()
 main = do
   file <- readFile "hello.scm"
-  print file
+  let schemeValues = getParser readScheme file
+  print schemeValues

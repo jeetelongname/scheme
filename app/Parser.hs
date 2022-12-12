@@ -1,18 +1,25 @@
-module Parser where
+module Parser
+  ( readScheme,
+    getParser,
+    car,
+    cdr,
+    SchemeValue,
+  )
+where
 
-import Control.Applicative
-import Data.Char
-import Data.Monoid
-import Data.Tuple
+import Control.Applicative (Alternative (empty, many, (<|>)))
+import Data.Char (isDigit, isSpace)
+import Data.Monoid (Any (Any, getAny))
+import Data.Tuple (swap)
 
 data SchemeValue
-  = SchemeBool Bool
-  | SchemeSym String -- This is different but I am not sure how to store it.
+  = SchemeEmpty
+  | SchemeBool Bool
   | SchemeVar String
   | SchemeNum Integer -- NOTE: No floats yet
   | SchemeString String -- NOTE: no escaping support
-  | SchemeList [SchemeValue]
-  | SchemeSexp (String, [SchemeValue])
+  | SchemeQuote SchemeValue
+  | SchemeCons {car :: SchemeValue, cdr :: SchemeValue}
   deriving (Show, Eq)
 
 newtype Parser a = Parser {getParser :: String -> Maybe (String, a)}
@@ -66,7 +73,16 @@ notNull (Parser p) =
       then Nothing
       else Just (input', as)
 
+sepBy :: Parser a -> Parser b -> Parser [a]
+sepBy element seperator = (:) <$> element <*> many (seperator *> element) <|> pure []
+
+listToCons :: [SchemeValue] -> SchemeValue
+listToCons = foldr SchemeCons SchemeEmpty
+
 -- parsers
+schemeEmpty :: Parser SchemeValue
+schemeEmpty = SchemeEmpty <$ (charP '(' *> ws <* charP ')')
+
 schemeBool :: Parser SchemeValue
 schemeBool = f <$> (stringP "#t" <|> stringP "#f")
   where
@@ -74,11 +90,8 @@ schemeBool = f <$> (stringP "#t" <|> stringP "#f")
     f "#f" = SchemeBool False
     f _ = error "this should not happen"
 
-schemeSym :: Parser SchemeValue
-schemeSym = SchemeSym <$> notNull (charP '\'' *> spanP notAllowed)
-
-schemeVar :: Parser SchemeValue
-schemeVar = SchemeVar <$> notNull (ws *> spanP notAllowed <* ws)
+schemeQuote :: Parser SchemeValue
+schemeQuote = SchemeQuote <$> (charP '\'' *> schemeValue)
 
 schemeNum :: Parser SchemeValue
 schemeNum = SchemeNum . read <$> notNull (spanP isDigit)
@@ -86,17 +99,29 @@ schemeNum = SchemeNum . read <$> notNull (spanP isDigit)
 schemeString :: Parser SchemeValue
 schemeString = SchemeString <$> (charP '"' *> spanP (/= '"') <* charP '"')
 
-sepBy :: Parser a -> Parser b -> Parser [a]
-sepBy element seperator = (:) <$> element <*> many (seperator *> element) <|> pure []
+schemeVar :: Parser SchemeValue
+schemeVar = SchemeVar <$> notNull (ws *> spanP notAllowed <* ws)
 
-schemeList :: Parser SchemeValue
-schemeList = SchemeList <$> (stringP "'(" *> ws *> sepBy schemeValue ws <* ws <* charP ')')
-
-schemeSexp :: Parser SchemeValue
-schemeSexp = SchemeSexp <$> (charP '(' *> ws *> call <* ws <* charP ')')
+schemeCons :: Parser SchemeValue
+schemeCons = listToCons <$> (charP '(' *> ws *> cons <* ws <* charP ')')
   where
-    call = (\(SchemeVar hd) rest -> (hd, rest)) <$> schemeVar <*> (ws *> sepBy schemeValue ws)
+    cons = sepBy schemeValue ws
 
--- Final value
+-- schemeSexp :: Parser SchemeValue
+-- schemeSexp = SchemeSexp <$> (charP '(' *> ws *> call <* ws <* charP ')')
+--   where
+--     call = (\(SchemeVar hd) rest -> (hd, rest)) <$> schemeVar <*> (ws *> sepBy schemeValue ws)
+
+-- -- Final value
 schemeValue :: Parser SchemeValue
-schemeValue = schemeSym <|> schemeVar <|> schemeBool <|> schemeNum <|> schemeString <|> schemeList <|> schemeSexp
+schemeValue =
+  schemeQuote
+    <|> schemeEmpty
+    <|> schemeBool
+    <|> schemeNum
+    <|> schemeString
+    <|> schemeVar
+    <|> schemeCons
+
+readScheme :: Parser SchemeValue
+readScheme = listToCons <$> many (ws *> schemeValue <* ws)
