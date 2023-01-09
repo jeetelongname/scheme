@@ -78,9 +78,6 @@ schemeBool = f <$> (stringP "#t" <|> stringP "#f")
     f "#f" = SchemeBool False
     f _ = error "this should not happen"
 
-schemeQuote :: Parser SchemeValue
-schemeQuote = SchemeQuote <$> (charP '\'' *> schemeValue)
-
 schemeNum :: Parser SchemeValue
 schemeNum = SchemeNum . read <$> notNull (spanP isDigit)
 
@@ -90,17 +87,15 @@ schemeString = SchemeString <$> (charP '"' *> spanP (/= '"') <* charP '"')
 schemeVar :: Parser SchemeValue
 schemeVar = SchemeVar <$> notNull (ws *> spanP notAllowed <* ws)
 
+schemeQuote :: Parser SchemeValue
+schemeQuote = SchemeQuote <$> (charP '\'' *> schemeValue)
+
 schemeCons :: Parser SchemeValue
 schemeCons = listToCons <$> (charP '(' *> ws *> cons <* ws <* charP ')')
   where
     cons = sepBy schemeValue ws
 
--- schemeSexp :: Parser SchemeValue
--- schemeSexp = SchemeSexp <$> (charP '(' *> ws *> call <* ws <* charP ')')
---   where
---     call = (\(SchemeVar hd) rest -> (hd, rest)) <$> schemeVar <*> (ws *> sepBy schemeValue ws)
-
--- -- Final value
+-- final interface
 schemeValue :: Parser SchemeValue
 schemeValue =
   schemeQuote
