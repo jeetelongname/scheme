@@ -84,8 +84,8 @@ schemeNum = SchemeNum . read <$> notNull (spanP isDigit)
 schemeString :: Parser SchemeValue
 schemeString = SchemeString <$> (charP '"' *> spanP (/= '"') <* charP '"')
 
-schemeVar :: Parser SchemeValue
-schemeVar = SchemeVar <$> notNull (ws *> spanP notAllowed <* ws)
+schemeIdentifier :: Parser SchemeValue
+schemeIdentifier = SchemeIdentifier <$> notNull (ws *> spanP notAllowed <* ws)
 
 schemeQuote :: Parser SchemeValue
 schemeQuote = SchemeQuote <$> (charP '\'' *> schemeValue)
@@ -103,7 +103,7 @@ schemeValue =
     <|> schemeBool
     <|> schemeNum
     <|> schemeString
-    <|> schemeVar
+    <|> schemeIdentifier
     <|> schemeCons
 
 readScheme :: Parser SchemeValue
