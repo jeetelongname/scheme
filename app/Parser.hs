@@ -1,9 +1,6 @@
 module Parser
   ( readScheme,
     getParser,
-    car,
-    cdr,
-    SchemeValue,
   )
 where
 
@@ -11,18 +8,9 @@ import Control.Applicative (Alternative (empty, many, (<|>)))
 import Data.Char (isDigit, isSpace)
 import Data.Monoid (Any (Any, getAny))
 import Data.Tuple (swap)
+import Type (SchemeValue (..))
 
-data SchemeValue
-  = SchemeEmpty
-  | SchemeBool Bool
-  | SchemeVar String
-  | SchemeNum Integer -- NOTE: No floats yet
-  | SchemeString String -- NOTE: no escaping support
-  | SchemeQuote SchemeValue
-  | SchemeCons {car :: SchemeValue, cdr :: SchemeValue}
-  deriving (Show, Eq)
-
-newtype Parser a = Parser {getParser :: String -> Maybe (String, a)}
+newtype Parser a = Parser {getParser :: String -> Maybe (String, a)} -- NOTE: no syntax errors
 
 -- instances
 instance Functor Parser where
